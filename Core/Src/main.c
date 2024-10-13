@@ -58,7 +58,7 @@
 
 
 
-#define SENSOR_COUNTER_MAX        2  /* defines step 1 = 4mm; 2 = 8mm ... */
+#define SENSOR_COUNTER_MAX        2  /* defines step 1 = 2mm; 2 = 4mm ... */
 volatile uint8_t sensor_counter = SENSOR_COUNTER_MAX;
 
 
@@ -416,7 +416,7 @@ int main(void)
 
         state_machine_status = STATE_MOVE_REEL_BACKWARD;
         HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_RESET);
-        sensor_counter = 1; /* 1 is minimum value = 4mm for now */
+        sensor_counter = 1; /* 1 is minimum value = 2mm for now */
         Tape_motor_stop();
         Reel_motor_reverse();
       }
