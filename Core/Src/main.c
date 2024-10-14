@@ -89,7 +89,7 @@ volatile uint16_t button_debounce_counter_1 = 0;
 volatile uint16_t button_debounce_counter_1_long = 0;
 volatile uint16_t button_debounce_counter_2 = 0;
 
-#define SENSOR_DEBOUNCE_VALUE  5*1 /* x100 uS */
+#define SENSOR_DEBOUNCE_VALUE  10*1 /* x100 uS */
 #define COMMAND_DEBOUNCE_VALUE  10*4 /* x100 uS */
 
 #define BUTTON_DEBOUNCE_VALUE  50 /* x1ms */
