@@ -28,7 +28,7 @@ make flash
 in `main.c` change folowing define
 
 ```c
-#define SENSOR_COUNTER_MAX        2  /* defines step 1 = 2mm; 2 = 4mm ... */
+#define FEED_STEP        4 /* defines feed step in mm */
 ```
 
 ### Features

@@ -61,7 +61,7 @@
 #define FEED_STEP        4 /* defines feed step in mm */
 
 
-#define BACKLASH_STEP    1 /* dk if it works with other values */
+#define BACKLASH_STEP    1 /* dk if it works with other values than 1 */
 #define SENSOR_COUNTER_MAX        (FEED_STEP + /* backlash compensation error */ BACKLASH_STEP)
 volatile uint8_t sensor_counter = SENSOR_COUNTER_MAX;
 
