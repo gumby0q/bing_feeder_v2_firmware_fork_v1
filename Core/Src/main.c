@@ -58,13 +58,18 @@
 
 
 
-#define SENSOR_COUNTER_MAX        2  /* defines step 1 = 2mm; 2 = 4mm ... */
+#define FEED_STEP        4 /* defines feed step in mm */
+
+
+#define BACKLASH_STEP    1 /* dk if it works with other values */
+#define SENSOR_COUNTER_MAX        (FEED_STEP + /* backlash compensation error */ BACKLASH_STEP)
 volatile uint8_t sensor_counter = SENSOR_COUNTER_MAX;
 
 
-#define STATE_IDLE                    1
-#define STATE_MOVE_REEL_FORWARD       2
-#define STATE_MOVE_REEL_BACKWARD      3
+#define STATE_IDLE                          1
+#define STATE_MOVE_REEL_FORWARD             2
+#define STATE_MOVE_REEL_BACKWARD            3
+#define STATE_MOVE_REEL_FORWARD_BACKLASH    4
 volatile uint8_t state_machine_status = STATE_IDLE;
 
 
@@ -84,7 +89,7 @@ volatile uint16_t button_debounce_counter_1 = 0;
 volatile uint16_t button_debounce_counter_1_long = 0;
 volatile uint16_t button_debounce_counter_2 = 0;
 
-#define SENSOR_DEBOUNCE_VALUE  10*1 /* x100 uS */
+#define SENSOR_DEBOUNCE_VALUE  5*1 /* x100 uS */
 #define COMMAND_DEBOUNCE_VALUE  10*4 /* x100 uS */
 
 #define BUTTON_DEBOUNCE_VALUE  50 /* x1ms */
@@ -113,14 +118,16 @@ void sensors_check(void)
 
       buttons_status = buttons_status ^ (1 << BUTTON_STATUS_MASK_0_SENSOR);
 
-      if ((buttons_status & (1 << BUTTON_STATUS_MASK_0_SENSOR)) == 0)
-      {
-        buttons_status_flags = buttons_status_flags | (1 << BUTTON_STATUS_MASK_0_SENSOR);
+      sensor_counter = sensor_counter - 1;
 
-        if (sensor_counter > 0) {
-          sensor_counter = sensor_counter - 1;
-        }
-      }
+      // if ((buttons_status & (1 << BUTTON_STATUS_MASK_0_SENSOR)) == 0)
+      // {
+      //   buttons_status_flags = buttons_status_flags | (1 << BUTTON_STATUS_MASK_0_SENSOR);
+
+      //   if (sensor_counter > 0) {
+      //     sensor_counter = sensor_counter - 1;
+      //   }
+      // }
     }
   }
   else
@@ -304,7 +311,7 @@ void Reel_motor_forward(void)
   HAL_GPIO_WritePin(MOTOR_2_B_GPIO_Port, MOTOR_2_B_Pin, GPIO_PIN_RESET);
 }
 
-void Reel_motor_reverse(void)
+void Reel_motor_backward(void)
 {
   HAL_GPIO_WritePin(MOTOR_2_A_GPIO_Port, MOTOR_2_A_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(MOTOR_2_B_GPIO_Port, MOTOR_2_B_Pin, GPIO_PIN_SET);
@@ -324,7 +331,7 @@ void Tape_motor_forward(void)
   HAL_GPIO_WritePin(MOTOR_1_B_GPIO_Port, MOTOR_1_B_Pin, GPIO_PIN_SET);
 }
 
-// void Tape_motor_reverse(void)
+// void Tape_motor_backward(void)
 // {
 //   HAL_GPIO_WritePin(MOTOR_1_A_GPIO_Port, MOTOR_1_A_Pin, GPIO_PIN_SET);
 //   HAL_GPIO_WritePin(MOTOR_1_B_GPIO_Port, MOTOR_1_B_Pin, GPIO_PIN_RESET);
@@ -416,9 +423,10 @@ int main(void)
 
         state_machine_status = STATE_MOVE_REEL_BACKWARD;
         HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_RESET);
-        sensor_counter = 1; /* 1 is minimum value = 2mm for now */
+        // sensor_counter = 1; /* 1 is minimum value = 2mm for now */
+        sensor_counter = 2; /* 2 is minimum value = 2mm for now */
         Tape_motor_stop();
-        Reel_motor_reverse();
+        Reel_motor_backward();
       }
       
       if ((buttons_status_flags & (1 << BUTTON_STATUS_MASK_2_COMM_IN)) != 0)
@@ -432,19 +440,35 @@ int main(void)
         Reel_motor_forward();
       }
 
-    } 
-    if (state_machine_status == STATE_MOVE_REEL_FORWARD) {
+    } else if (state_machine_status == STATE_MOVE_REEL_FORWARD) {
+      // if (sensor_counter == 0) {
+      //   Reel_motor_stop();
+      //   HAL_Delay(5);
+      //   Tape_motor_forward();
+      //   state_machine_status = STATE_IDLE;
+      //   HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_SET);
+      // }
       if (sensor_counter == 0) {
         Reel_motor_stop();
-        HAL_Delay(5);
+        HAL_Delay(100);
+        // Tape_motor_forward();
+        sensor_counter = BACKLASH_STEP;
+        Reel_motor_backward();
+        state_machine_status = STATE_MOVE_REEL_FORWARD_BACKLASH;
+        // HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_SET);
+      }
+    } else if (state_machine_status == STATE_MOVE_REEL_BACKWARD) {
+      if (sensor_counter == 0) {
+        Reel_motor_stop();
+        HAL_Delay(100);
         Tape_motor_forward();
         state_machine_status = STATE_IDLE;
         HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_SET);
       }
-    } if (state_machine_status == STATE_MOVE_REEL_BACKWARD) {
+    } else if (state_machine_status == STATE_MOVE_REEL_FORWARD_BACKLASH) {
       if (sensor_counter == 0) {
         Reel_motor_stop();
-        HAL_Delay(5);
+        HAL_Delay(100);
         Tape_motor_forward();
         state_machine_status = STATE_IDLE;
         HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, GPIO_PIN_SET);
@@ -466,7 +490,7 @@ int main(void)
     //   HAL_Delay(1000);
     //   Reel_motor_stop();
     //   // HAL_Delay(1000);
-    //   // Reel_motor_reverse();
+    //   // Reel_motor_backward();
     //   // HAL_Delay(1000);
     //   // Reel_motor_stop();
 
@@ -486,7 +510,7 @@ int main(void)
 
     //   // HAL_GPIO_TogglePin(LED_0_GPIO_Port, LED_0_Pin);
     //   Reel_motor_stop();
-    //   Reel_motor_reverse();
+    //   Reel_motor_backward();
     //   HAL_Delay(1000);
     //   Reel_motor_stop();
 
